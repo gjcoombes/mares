@@ -47,15 +47,24 @@ class RunSet(object):
         self._phase = phase
         self._conn = r_conn or redis_connection()
 
-    def __unicode__(self):
-        return u":".join([self._group, self._machine, self._phase])
-
-    def __str__(self):
-        return ":".join([self.group, self.machine, self.phase])
+    def __eq__(self, other):
+        """Equal if same key and underlying redis instance"""
+        return all([
+                self.group == other.group,
+                self.machine == other.machine,
+                self.phase == other.phase,
+            ])
 
     def __repr__(self):
         """ e.g. RunSet("test", "wahanda", "running") """
         return 'RunSet("{o.group}", "{o.machine}", "{o.phase}")'.format(o=self)
+
+    def __str__(self):
+        return ":".join([self.group, self.machine, self.phase])
+
+    def __unicode__(self):
+        return u":".join([self._group, self._machine, self._phase])
+
 
     @property
     def key(self):
@@ -91,10 +100,12 @@ class RunSet(object):
         self.conn.delete(self.key, stem)
 
 
+
+
 ### Functions
 
 ### Tests
-def test_suite():
+def xtest_suite():
     test_runset_key()
     test_runset_group()
     test_runset_setter()
@@ -104,6 +115,7 @@ def test_suite():
     test_runset_delete()
     test_runset_repr()
     test_runset_roundtrip()
+    test_runset_equals_true()
 
 def test_runset_key():
     r = RunSet("trial", "wahanda", "running")
@@ -150,8 +162,13 @@ def test_runset_roundtrip():
     new_r = eval(repr(r))
     assert isinstance(new_r, RunSet)
 
+def test_runset_equals_true():
+    r1 = RunSet("test", "wahanda", "running")
+    r2 = RunSet("test", "wahanda", "running")
+    assert r1 == r2
+
 if __name__ == "__main__":
-    test_suite()
+    # test_suite()
 
 
 
