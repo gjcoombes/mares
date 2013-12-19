@@ -44,6 +44,8 @@ INSTALLED_APPS = (
     'django.contrib.messages',
     'django.contrib.staticfiles',
     'mares',
+    'runsets',
+    'south',
 )
 
 MIDDLEWARE_CLASSES = (
@@ -68,6 +70,7 @@ DATABASES = {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
         'USER': cfg['user'],
         'PASSWORD': cfg['password'],
+        # 'PASSWORD': "Please123",
         'NAME': cfg['dbname'],
     }
 }

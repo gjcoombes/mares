@@ -11,6 +11,7 @@ A combination
 ### Imports
 from __future__ import print_function
 
+from django.db import models
 import redis
 
 ### Logging ###
@@ -35,7 +36,54 @@ def redis_connection(r_conn=None, host=None, port=None, db=None):
         r = r_conn
     return r
 
-class RunSet(object):
+class Machine(models.Model):
+    WOODSIDE = "WD"
+    APACHE = "AP"
+    NONE = "NN"
+    TEAM_CHOICES = (
+        (WOODSIDE, 'Woodside'),
+        (APACHE, 'Apache'),
+        (NONE, 'No team'),
+    )
+    name = models.CharField(max_length=64, unique=True)
+    description = models.TextField(blank=True)
+    abbrev = models.CharField(max_length=16, blank=True)
+    ip_address = models.IPAddressField(blank=True)
+    cpu_count  = models.IntegerField(blank=True, help_text="Cores available for use e.g. 12")
+    cpu_frequency = models.FloatField(blank=True, help_text="Speed in GHz e.g. 3.6")
+    ram = models.IntegerField(blank=True, help_text="RAM in GB e.g. 32")
+    team = models.CharField(max_length=2, choices=TEAM_CHOICES, default=NONE)
+    drives = models.TextField(blank=True)
+
+class RunSet(models.Model):
+    group   = models.CharField(max_length=64)
+    machine = models.ForeignKey(Machine, blank=True)
+    phase   = models.CharField(max_length=64)
+    key     = models.CharField(max_length=64*3, blank=True)
+
+    def save(self):
+        if not self.id:
+            # Query for name field of Machine
+            machine_name = self.machine.name
+            self.key = ":".join((self.group, machine_name, self.phase))
+        super(RunSet, self).save()
+
+    def members(self):
+        _members = self.conn.smembers(self.key) 
+        return sorted(_members)
+
+    def is_member(self, stem):
+        return self.conn.sismember(self.key, stem)
+
+    def add(self, stem):
+        self.conn.sadd(self.key, stem)
+
+    def delete(self, stem):
+        self.conn.delete(self.key, stem)
+
+
+
+class RunSetObject(object):
     """
     Represents one redis set
     e.g. j0282:wahanda:running

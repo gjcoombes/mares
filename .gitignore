@@ -9,6 +9,7 @@
 
 # Config files
 *.cfg
+*.dmp
 
 __pycache__/*
 *.py[cod]
