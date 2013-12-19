@@ -41,11 +41,19 @@ class RunSet(object):
     e.g. j0282:wahanda:running
     """
 
-    def __init__(self, group, machine, phase, r_conn=None):
-        self._group = group
-        self._machine = machine
-        self._phase = phase
+    def __init__(self, group=None, machine=None, phase=None, r_conn=None, key=None,):
+        if key:
+            if not any([group, machine, phase]):
+                self._group, self._machine, self._phase = key.split(':')
+            else:
+                raise ValueError, "init parameters inconsistent {} {} {} {}".format(
+                        group, machine, phase, key)
+        else:
+            self._group = group
+            self._machine = machine
+            self._phase = phase
         self._conn = r_conn or redis_connection()
+
 
     def __eq__(self, other):
         """Equal if same key and underlying redis instance"""
@@ -88,7 +96,8 @@ class RunSet(object):
 
     @property
     def members(self):
-        return self.conn.smembers(self.key)
+        _members = self.conn.smembers(self.key) 
+        return sorted(_members)
 
     def is_member(self, stem):
         return self.conn.sismember(self.key, stem)

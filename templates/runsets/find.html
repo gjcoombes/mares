@@ -1,0 +1,22 @@
+<h2>What's happening on the network?</h2>  
+
+<form action="/mares/runsets/find/" method="post">
+{% csrf_token %}
+{{ form.as_p }}
+<input type="submit" value="Submit" />
+</form>
+
+{% if runsets %}
+<ul>
+{% for runset in runsets %}
+    <li>{{ runset.key }}</a></li>
+    <ol>
+        {% for run in runset.members %}
+        <li>{{ run }}</li>
+        {% endfor %}
+    </ol>
+{% endfor %}
+</ul>
+{% else %}
+<p>No runsets are available.</p>
+{% endif %} 
