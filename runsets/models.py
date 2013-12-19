@@ -55,11 +55,17 @@ class Machine(models.Model):
     team = models.CharField(max_length=2, choices=TEAM_CHOICES, default=NONE)
     drives = models.TextField(blank=True)
 
+    def __unicode__(self):
+        return self.name
+
 class RunSet(models.Model):
     group   = models.CharField(max_length=64)
     machine = models.ForeignKey(Machine, blank=True)
     phase   = models.CharField(max_length=64)
     key     = models.CharField(max_length=64*3, blank=True)
+
+    def __unicode__(self):
+        return self.key
 
     def save(self):
         if not self.id:
