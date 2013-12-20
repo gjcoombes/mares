@@ -68,6 +68,8 @@ WSGI_APPLICATION = 'mares.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.postgresql_psycopg2',
+        'HOST': cfg['host'],
+        'PORT': cfg['port'],
         'USER': cfg['user'],
         'PASSWORD': cfg['password'],
         # 'PASSWORD': "Please123",

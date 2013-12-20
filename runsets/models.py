@@ -12,6 +12,7 @@ A combination
 from __future__ import print_function
 
 from django.db import models
+from django.core.exceptions import ObjectDoesNotExist
 import redis
 
 ### Logging ###
@@ -36,6 +37,31 @@ def redis_connection(r_conn=None, host=None, port=None, db=None):
         r = r_conn
     return r
 
+def machine_or_new(name):
+    """
+    Return the machine instance make a new machine_or_new
+    """
+    try:
+        m = Machine.objects.get(name=name)
+    except ObjectDoesNotExist:
+        m = Machine(name=name)
+        m.save()
+    return m
+
+def runset_or_new(key):
+    """
+    Return the runset instance or make a new one
+    """
+    try:
+        rs = RunSet.objects.get(key=key)
+    except ObjectDoesNotExist:
+        g, m, p = key.split(':')
+        mo = machine_or_new(m)
+        rs = RunSet(group=g, machine=mo, phase=p)
+        rs.save()
+    return rs
+
+
 class Machine(models.Model):
     WOODSIDE = "WD"
     APACHE = "AP"
@@ -48,10 +74,10 @@ class Machine(models.Model):
     name = models.CharField(max_length=64, unique=True)
     description = models.TextField(blank=True)
     abbrev = models.CharField(max_length=16, blank=True)
-    ip_address = models.IPAddressField(blank=True)
-    cpu_count  = models.IntegerField(blank=True, help_text="Cores available for use e.g. 12")
-    cpu_frequency = models.FloatField(blank=True, help_text="Speed in GHz e.g. 3.6")
-    ram = models.IntegerField(blank=True, help_text="RAM in GB e.g. 32")
+    ip_address = models.IPAddressField(blank=True, default="0.0.0.0")
+    cpu_count  = models.IntegerField(blank=True, default=0, help_text="Cores available for use e.g. 12")
+    cpu_frequency = models.FloatField(blank=True, default=0.0, help_text="Speed in GHz e.g. 3.6")
+    ram = models.IntegerField(blank=True, default=0, help_text="RAM in GB e.g. 32")
     team = models.CharField(max_length=2, choices=TEAM_CHOICES, default=NONE)
     drives = models.TextField(blank=True)
 
@@ -59,10 +85,23 @@ class Machine(models.Model):
         return self.name
 
 class RunSet(models.Model):
+    AWAITING = "awaiting"
+    RUNNNING = "running"
+    SUNK     = "sunk"
+    FAILED   = "failed"
+    PHASE_CHOICES = (
+        (AWAITING, "Awaiting"),
+        (RUNNNING, "Running"),
+        (SUNK,     "Sunk"),
+        (FAILED,   "Failed"),
+    )
+
     group   = models.CharField(max_length=64)
     machine = models.ForeignKey(Machine, blank=True)
-    phase   = models.CharField(max_length=64)
+    phase   = models.CharField(max_length=64, choices=PHASE_CHOICES)
     key     = models.CharField(max_length=64*3, blank=True)
+
+    _conn = None
 
     def __unicode__(self):
         return self.key
@@ -75,7 +114,14 @@ class RunSet(models.Model):
         super(RunSet, self).save()
 
     def members(self):
-        _members = self.conn.smembers(self.key) 
+        key = self.key
+        r = redis_connection()
+        _members = r.smembers(key) 
+        debug("key: {}, members: {}".format(key, _members))
+        debug("group is        : {}".format(self.group))
+        debug("machine name is : {}".format(self.machine.name))
+        debug("phase is        : {}".format(self.phase))
+        debug("key is          : {}".format(self.key))
         return sorted(_members)
 
     def is_member(self, stem):
@@ -84,8 +130,14 @@ class RunSet(models.Model):
     def add(self, stem):
         self.conn.sadd(self.key, stem)
 
-    def delete(self, stem):
+    def delete_stem(self, stem):
         self.conn.delete(self.key, stem)
+
+    @property
+    def conn(self):
+        if not self._conn:
+            self._conn = redis_connection()
+        return self._conn
 
 
 

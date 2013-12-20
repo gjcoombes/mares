@@ -5,7 +5,7 @@ from django.http import HttpResponse
 from django.shortcuts import render, redirect
 from django.template import RequestContext, loader
 
-from runsets.models import RunSet, redis_connection
+from runsets.models import RunSet, redis_connection, runset_or_new
 from runsets.forms import RunSetForm
 
 def index(request):
@@ -37,7 +37,9 @@ def find(request, group='all', machine='all', phase='all'):
     keys = r.keys(keys_pattern)
     runsets = []
     for k in keys:
-        runsets.append(RunSet(r_conn=r, key=k))
+        # Check the key exists in the database
+        rs = runset_or_new(k)
+        runsets.append(rs)
 
     return render(request, 'runsets/find.html', {
             'group'  : group,
