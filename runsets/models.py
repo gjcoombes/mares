@@ -114,14 +114,13 @@ class RunSet(models.Model):
         super(RunSet, self).save()
 
     def members(self):
-        key = self.key
-        r = redis_connection()
-        _members = r.smembers(key) 
-        debug("key: {}, members: {}".format(key, _members))
-        debug("group is        : {}".format(self.group))
-        debug("machine name is : {}".format(self.machine.name))
-        debug("phase is        : {}".format(self.phase))
-        debug("key is          : {}".format(self.key))
+        _members = r.conn.smembers(self.key) 
+
+        if __debug__:
+            debug("group is        : {}".format(self.group))
+            debug("machine name is : {}".format(self.machine.name))
+            debug("phase is        : {}".format(self.phase))
+            debug("key is          : {}".format(self.key))
         return sorted(_members)
 
     def is_member(self, stem):
